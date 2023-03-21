@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Makeup.UI;
 using TransformExtensions;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -9,7 +10,6 @@ namespace Gameplay
     {
         [SerializeField] private RectTransform _rectTransform;
         [SerializeField] private Tilemap _tilemap;
-        [SerializeField] private BlockObject _blockObject;
 
         private readonly List<Vector3> _map = new();
 
@@ -34,7 +34,7 @@ namespace Gameplay
                 block.transform.SetPositionXY(newPos.x, newPos.y);
                 _map.Add(newPos);
 
-                var newBlock = Instantiate(_blockObject, transform);
+                var newBlock = Pool.Get<BlockObject>(transform);
                 newBlock.transform.SetPositionXY(0, -25);
             }
         }
