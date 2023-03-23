@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "PoolConfig", menuName = "PoolConfig")]
-public class Pool : ScriptableObject
+public class Pool : MonoBehaviour
 {
     [SerializeField] private GameObject[] _items;
 
@@ -13,11 +12,8 @@ public class Pool : ScriptableObject
 
     private static readonly List<MonoBehaviour> PooledObjects = new();
 
-    private void OnEnable()
+    private void Awake()
     {
-        if (!_instance)
-            _instance = Resources.Load<Pool>("PoolConfig");
-
         foreach (var item in _items) 
             Items.Add(item.GetType(), item);
     }
