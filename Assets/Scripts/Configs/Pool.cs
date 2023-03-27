@@ -34,7 +34,11 @@ public class Pool : MonoBehaviour
             }
         }
         else
+        {
+            obj.gameObject.SetActive(true);
+            obj.transform.SetParent(parent);
             PooledObjects.Remove(obj);
+        }
 
         if (obj == null)
             Debug.LogWarning($"Object of type {typeof(T)} doesn't exist in pool");
@@ -42,7 +46,7 @@ public class Pool : MonoBehaviour
         return obj;
     }
 
-    public static void Release(MonoBehaviour obj)
+    public static void Release<T>(T obj) where T : MonoBehaviour
     {
         obj.gameObject.SetActive(false);
         obj.transform.SetParent(null);

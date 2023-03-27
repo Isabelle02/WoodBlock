@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Extensions;
 using TransformExtensions;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -14,11 +13,18 @@ namespace Gameplay
         [SerializeField] private RectTransform _rectTransform;
         [SerializeField] private Tilemap _tilemap;
 
-        private readonly List<Vector3> _map = new();
+        private BlockObject _currentBlock;
+        private readonly Dictionary<Vector3, BlockObject> _blocks = new();
 
         private void Awake()
         {
             DragDropMechanics.Dropped += OnObjectDropped;
+        }
+
+        private void Start()
+        {
+            _currentBlock = Pool.Get<BlockObject>(transform);
+            _currentBlock.transform.SetPositionXY(0, -25);
         }
 
         private void OnObjectDropped(Collider2D obj, Vector3 defaultPos)
@@ -27,7 +33,7 @@ namespace Gameplay
             var cell = _tilemap.WorldToCell(pos);
             var newPos = _tilemap.CellToWorld(cell) + _tilemap.cellSize / 2;
             
-            if (!obj.bounds.IsInBounds(_rectTransform.Bounds()) || _map.Contains(newPos))
+            if (!obj.bounds.IsInBounds(_rectTransform.Bounds()) || _blocks.Keys.ToList().Exists(key => key == newPos))
                 obj.transform.position = defaultPos;
             else
             {
@@ -35,19 +41,21 @@ namespace Gameplay
 
                 var block = obj.gameObject.GetComponent<BlockObject>();
                 block.transform.SetPositionXY(newPos.x, newPos.y);
-                _map.Add(newPos);
+                _blocks.Add(newPos, block);
 
-                var newBlock = Pool.Get<BlockObject>(transform);
-                newBlock.transform.SetPositionXY(0, -25);
+                _currentBlock = Pool.Get<BlockObject>(transform);
+                _currentBlock.transform.SetPositionXY(0, -25);
 
                 var breaking = GetToBreak();
-                foreach (var breakingPos in _map)
+                var breakingBlocks = new Dictionary<Vector3, BlockObject>(_blocks);
+                foreach (var breakingBlock in breakingBlocks)
                 {
+                    var breakingPos = breakingBlock.Key;
                     if (breaking.ContainsKey(breakingPos.x) || breaking.ContainsKey(breakingPos.y))
                     {
-                        var breakingBlock = breakingPos.GetObject<BlockObject>();
-                        if (breakingBlock)
-                            Pool.Release(breakingBlock);
+                        breakingBlock.Value.Collider.enabled = true;
+                        _blocks.Remove(breakingBlock.Key);
+                        Pool.Release(breakingBlock.Value);
                     }
                 }
             }
@@ -56,9 +64,12 @@ namespace Gameplay
         private Dictionary<float, int> GetToBreak()
         {
             var breaking = new Dictionary<float, int>();
-            var breakingX = _map.GroupBy(item => item.x).Where(group => group.Count() == _size.y)
+
+            var positions = _blocks.Keys;
+            
+            var breakingX = positions.GroupBy(item => item.x).Where(group => group.Count() == _size.y)
                 .ToDictionary(g => g.Key, x => x.Count());
-            var breakingY = _map.GroupBy(item => item.y).Where(group => group.Count() == _size.x)
+            var breakingY = positions.GroupBy(item => item.y).Where(group => group.Count() == _size.x)
                 .ToDictionary(g => g.Key, x => x.Count());
 
             breaking.AddRange(breakingX);
